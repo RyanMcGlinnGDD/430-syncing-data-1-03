@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+		#wrapper{
+          width: 800px;
+          height: 500px;
+          background-color: ghostwhite;
+          margin: 0;
+          padding: 0;
+          display: block;
+		}
+      canvas{
+        width: 100%;
+        height: 100%;
+      }
+	</style>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://npmcdn.com/babel-core@5.8.38/browser.min.js"></script>
+    <script type="text/babel" >
+      "use strict";
+      let socket;
+
+      let canvas;
+      let ctx;
+      let set;
+      let userId;
+      //fired when app client starts, initializes socket logic
+      const init = () => {
+        canvas = document.querySelector('canvas');
+        ctx = canvas.getContext('2d');
+        canvas.width = 800;
+        canvas.height = 500;
+        set = {};
+
+        //event listener for when a key is pressed
+        window.addEventListener('keydown', (e) => {
+          if(e.keyCode === 38 || e.keyCode === 87){
+            let time = new Date().getTime();
+            socket.emit('requestShapeUpdate', { x: 0, y: -5, t: time, user: userId, });
+          } else if(e.keyCode === 37 || e.keyCode === 65){
+            let time = new Date().getTime();
+            socket.emit('requestShapeUpdate', { x: -5, y: 0, t: time, user: userId, });
+          } else if(e.keyCode === 40 || e.keyCode === 83){
+            let time = new Date().getTime();
+            socket.emit('requestShapeUpdate', { x: 0, y: 5, t: time, user: userId, });
+          } else if(e.keyCode === 39 || e.keyCode === 68){
+            let time = new Date().getTime();
+            socket.emit('requestShapeUpdate', { x: 5, y: 0, t: time, user: userId, });
+          }
+        });
+        
+        //assign event handlers
+        setupSocket();
+        //join the room
+        let time = new Date().getTime();
+        socket.emit('join', time);
+      }
+
+      //when socket is connected, adds event handlers
+      const setupSocket = () => {
+        //establish socket connection
+        socket = io.connect();
+        
+        // sync local set with server and set userId
+        socket.on('serveInitialSet', (data) => {
+          set = data;
+        });
+        socket.on('serveUserId', (data) => {
+          userId = data;
+          socket.userId = userId;
+        });
+        // add a new shape or update a shape to the local set
+        socket.on('serveShape', (data) => {
+          set[data.user] = data;
+          draw();
+        });
+        // add a new shape or update a shape to the local set
+        socket.on('serveRemoveShape', (data) => {
+          set[data] = null;
+          draw();
+        });
+      }
+
+      const draw = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let keys = Object.keys(set);
+        //for loop for every shape
+        for(let i = 0; i < keys.length; i++){
+          const piece = set[keys[i]];
+          
+          ctx.save();
+          //determine color based on typing
+          if(piece.user === userId){
+            ctx.fillStyle = 'red';
+          } else{
+            ctx.fillStyle = 'black';
+          }
+          
+          ctx.beginPath();
+          ctx.arc(piece.x-10,piece.y-10, 20, 0, 2 * Math.PI, false);
+          ctx.fill();
+          ctx.restore();
+        }
+      };
+
+      
+      
+      window.onload = init;
+    </script>
+</head>
+<body>
+  <div id='wrapper'>
+  <canvas id="interactArea">Use a browser that supports modern web capabilities</canvas>
+  </div>
+</body>
+</html>
