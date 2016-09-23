@@ -85,7 +85,7 @@ const onDisconnect = (sock) => {
   socket.on('disconnect', () => {
     console.log(`${socket.userId} disconnecting from server...`);
 
-    set[socket.userId] = null;
+    delete set[socket.userId];
     io.sockets.in('room1').emit('serveRemoveShape', socket.userId);
 
     // leave the room
